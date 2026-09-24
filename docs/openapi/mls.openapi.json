@@ -1,0 +1,1199 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PenthouseLife MLS API",
+    "version": "1.0.0",
+    "description": "REST API documentation for the PenthouseLife MLS API"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "dev (this server)"
+    }
+  ],
+  "paths": {
+    "/listings": {
+      "post": {
+        "tags": [
+          "Listings"
+        ],
+        "summary": "Create a listing",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateListing"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Listing created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "description": "The MLS number already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Listings"
+        ],
+        "summary": "List listings (filter, sort, paginate)",
+        "description": "Reads straight from PostgreSQL. All filters are optional and can be combined. For full-text search with typo tolerance, use /listings/search.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "in": "query",
+            "name": "city",
+            "required": false,
+            "description": "Exact city (case-insensitive)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Hyderabad"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "PENDING",
+                "SOLD",
+                "WITHDRAWN"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "propertyType",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENTHOUSE",
+                "APARTMENT",
+                "VILLA",
+                "TOWNHOUSE",
+                "PLOT"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "minPrice",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "example": 10000000
+          },
+          {
+            "in": "query",
+            "name": "maxPrice",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "example": 80000000
+          },
+          {
+            "in": "query",
+            "name": "minBedrooms",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "example": 3
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "description": "Matches title, address or MLS number",
+            "schema": {
+              "type": "string"
+            },
+            "example": "terrace"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "price",
+                "bedrooms",
+                "areaSqft"
+              ],
+              "default": "createdAt"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of matching listings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/listings/stats": {
+      "get": {
+        "tags": [
+          "Listings"
+        ],
+        "summary": "Listing statistics",
+        "description": "Counts by status, plus count and average price for each city.",
+        "responses": {
+          "200": {
+            "description": "Statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingStats"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/listings/search": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Full-text listing search (Elasticsearch, cached in Redis)",
+        "description": "1. Looks for the same query in Redis. If found, returns it with `source: redis-cache`.\n2. Otherwise searches Elasticsearch, stores the result in Redis for\n   REDIS_CACHE_TTL_SECONDS, and returns it with `source: elasticsearch`.\n\n`q` matches title, description, address and city, tolerates typos, and an exact\nMLS number ranks first. The cache is cleared whenever a listing changes.\n",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Free text, e.g. \"terrace banjara\" or an MLS number",
+            "schema": {
+              "type": "string"
+            },
+            "example": "terrace"
+          },
+          {
+            "in": "query",
+            "name": "city",
+            "required": false,
+            "description": "Exact city (case-insensitive)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Hyderabad"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "PENDING",
+                "SOLD",
+                "WITHDRAWN"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "propertyType",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENTHOUSE",
+                "APARTMENT",
+                "VILLA",
+                "TOWNHOUSE",
+                "PLOT"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "minPrice",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxPrice",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "minBedrooms",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "description": "Defaults to relevance when q is given, otherwise createdAt",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "relevance",
+                "createdAt",
+                "price",
+                "bedrooms",
+                "areaSqft"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching listings and where they came from",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Elasticsearch is not configured, not reachable, or the index is still being created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 503,
+                  "message": "Search is unavailable: Elasticsearch is not reachable.",
+                  "error": "Service Unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listings/search/reindex": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Rebuild the search index from the database",
+        "description": "Deletes and recreates the Elasticsearch index, loads every listing from PostgreSQL,\nand clears the Redis search cache. Normally not needed: the index is filled on\nstartup and updated whenever a listing changes. Use it after changing data\ndirectly in the database (for example after `npm run db:seed`).\n",
+        "responses": {
+          "200": {
+            "description": "Index rebuilt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReindexResult"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Elasticsearch or the database is not reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listings/{mlsNumber}": {
+      "get": {
+        "tags": [
+          "Listings"
+        ],
+        "summary": "Get a listing by MLS number",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mlsNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "HYD-2026-0001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Listings"
+        ],
+        "summary": "Update a listing",
+        "description": "For example, change the price or mark it as sold.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mlsNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "HYD-2026-0001"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateListing"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Listings"
+        ],
+        "summary": "Delete a listing",
+        "description": "Also removes favorites and inquiries for this listing.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mlsNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "HYD-2026-0001"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Listing deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "General"
+        ],
+        "summary": "Check the service, database, Redis and Elasticsearch",
+        "description": "`status` is `degraded` when the database or any configured dependency is down.\nRedis and Elasticsearch show `disabled` when their URL is empty.\n",
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "General"
+        ],
+        "summary": "Check whether the API is running",
+        "responses": {
+          "200": {
+            "description": "API is running",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "penthouselife-api is running",
+                  "docs": "/api-docs"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ListingDocument": {
+        "type": "object",
+        "description": "A listing as stored in the search index. Prices are numbers here.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx4d5e6f0000ijkl5678mnop"
+          },
+          "mlsNumber": {
+            "type": "string",
+            "example": "HYD-2026-0001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Skyline penthouse with private terrace"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "PENTHOUSE",
+              "APARTMENT",
+              "VILLA",
+              "TOWNHOUSE",
+              "PLOT"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "example": "Road No. 12, Banjara Hills"
+          },
+          "city": {
+            "type": "string",
+            "example": "Hyderabad"
+          },
+          "price": {
+            "type": "number",
+            "example": 45000000
+          },
+          "bedrooms": {
+            "type": "integer",
+            "nullable": true,
+            "example": 4
+          },
+          "bathrooms": {
+            "type": "number",
+            "nullable": true,
+            "example": 4.5
+          },
+          "areaSqft": {
+            "type": "integer",
+            "nullable": true,
+            "example": 5200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PENDING",
+              "SOLD",
+              "WITHDRAWN"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "redis-cache",
+              "elasticsearch"
+            ],
+            "description": "Where this response came from",
+            "example": "elasticsearch"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListingDocument"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "ReindexResult": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "string",
+            "example": "penthouselife_listings"
+          },
+          "indexed": {
+            "type": "integer",
+            "example": 6
+          },
+          "tookMs": {
+            "type": "integer",
+            "example": 412
+          }
+        }
+      },
+      "Listing": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx4d5e6f0000ijkl5678mnop"
+          },
+          "mlsNumber": {
+            "type": "string",
+            "example": "HYD-2026-0001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Skyline penthouse with private terrace"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Top-floor residence with 360° city views."
+          },
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "PENTHOUSE",
+              "APARTMENT",
+              "VILLA",
+              "TOWNHOUSE",
+              "PLOT"
+            ],
+            "example": "PENTHOUSE"
+          },
+          "address": {
+            "type": "string",
+            "example": "Road No. 12, Banjara Hills"
+          },
+          "city": {
+            "type": "string",
+            "example": "Hyderabad"
+          },
+          "price": {
+            "type": "string",
+            "description": "Decimal serialized as a string",
+            "example": "45000000.00"
+          },
+          "bedrooms": {
+            "type": "integer",
+            "nullable": true,
+            "example": 4
+          },
+          "bathrooms": {
+            "type": "string",
+            "nullable": true,
+            "description": "Decimal serialized as a string",
+            "example": "4.5"
+          },
+          "areaSqft": {
+            "type": "integer",
+            "nullable": true,
+            "example": 5200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PENDING",
+              "SOLD",
+              "WITHDRAWN"
+            ],
+            "example": "ACTIVE"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedListings": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Listing"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "ListingStats": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "example": 18
+          },
+          "byStatus": {
+            "type": "object",
+            "properties": {
+              "ACTIVE": {
+                "type": "integer",
+                "example": 10
+              },
+              "PENDING": {
+                "type": "integer",
+                "example": 2
+              },
+              "SOLD": {
+                "type": "integer",
+                "example": 5
+              },
+              "WITHDRAWN": {
+                "type": "integer",
+                "example": 1
+              }
+            }
+          },
+          "byCity": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "example": "Hyderabad"
+                },
+                "count": {
+                  "type": "integer",
+                  "example": 12
+                },
+                "averagePrice": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "38500000.00"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateListing": {
+        "type": "object",
+        "required": [
+          "mlsNumber",
+          "title",
+          "address",
+          "city",
+          "price"
+        ],
+        "properties": {
+          "mlsNumber": {
+            "type": "string",
+            "description": "Unique MLS number. Letters, digits and dashes, 3–30 characters.",
+            "example": "HYD-2026-0005"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200,
+            "example": "Rooftop penthouse with infinity pool"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "example": "Private rooftop with pool and panoramic views of the lake."
+          },
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "PENTHOUSE",
+              "APARTMENT",
+              "VILLA",
+              "TOWNHOUSE",
+              "PLOT"
+            ],
+            "default": "PENTHOUSE"
+          },
+          "address": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "example": "Hitech City Road, Madhapur"
+          },
+          "city": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Hyderabad"
+          },
+          "price": {
+            "type": "number",
+            "description": "Asking price, up to 2 decimal places",
+            "example": 52000000
+          },
+          "bedrooms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50,
+            "example": 4
+          },
+          "bathrooms": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Up to 1 decimal place",
+            "example": 4.5
+          },
+          "areaSqft": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 5600
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PENDING",
+              "SOLD",
+              "WITHDRAWN"
+            ],
+            "default": "ACTIVE"
+          }
+        }
+      },
+      "UpdateListing": {
+        "type": "object",
+        "description": "Send only the fields you want to change. The MLS number cannot be changed.",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "PENTHOUSE",
+              "APARTMENT",
+              "VILLA",
+              "TOWNHOUSE",
+              "PLOT"
+            ]
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "bedrooms": {
+            "type": "integer"
+          },
+          "bathrooms": {
+            "type": "number"
+          },
+          "areaSqft": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PENDING",
+              "SOLD",
+              "WITHDRAWN"
+            ]
+          }
+        },
+        "example": {
+          "price": 43500000,
+          "status": "PENDING"
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 404
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": "Resource not found"
+          },
+          "error": {
+            "type": "string",
+            "example": "Not Found"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "example": 57
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 3
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "example": "ok"
+          },
+          "service": {
+            "type": "string",
+            "description": "Value of SERVICE_NAME",
+            "example": "penthouselife-mls"
+          },
+          "appEnv": {
+            "type": "string",
+            "description": "Value of APP_ENV",
+            "example": "dev"
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "example": "up"
+          },
+          "redis": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "disabled"
+            ],
+            "example": "up"
+          },
+          "elasticsearch": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "disabled"
+            ],
+            "example": "up"
+          },
+          "uptimeSeconds": {
+            "type": "integer",
+            "example": 123
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Page": {
+        "in": "query",
+        "name": "page",
+        "required": false,
+        "description": "Page number, starting at 1",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "Limit": {
+        "in": "query",
+        "name": "limit",
+        "required": false,
+        "description": "Items per page. Defaults to PAGINATION_DEFAULT_LIMIT, capped at PAGINATION_MAX_LIMIT.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "example": 20
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid input. `message` lists every problem.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "statusCode": 400,
+              "message": [
+                "email must be an email"
+              ],
+              "error": "Bad Request"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The resource does not exist",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "A record with the same unique value already exists",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded (RATE_LIMIT_MAX requests per RATE_LIMIT_TTL_SECONDS)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "The database is not reachable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "statusCode": 503,
+              "message": "The database is not reachable",
+              "error": "Service Unavailable"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Listings",
+      "description": "Properties on the market (read from PostgreSQL)"
+    },
+    {
+      "name": "Search",
+      "description": "Full-text search with Elasticsearch, cached in Redis"
+    },
+    {
+      "name": "General",
+      "description": "Service status"
+    }
+  ]
+}

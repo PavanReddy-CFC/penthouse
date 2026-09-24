@@ -1,0 +1,244 @@
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --ink: #18212e;
+  --ink-soft: #566173;
+  --line: #d5dbe3;
+  --brass: #8c6d34;
+  --good: #2f7d5b;
+  --warn: #a8761c;
+  --bad: #b4432f;
+  --pending: #8a94a3;
+
+  --serif: 'Bodoni 72', 'Didot', 'Bodoni MT', 'Libre Bodoni', Georgia, serif;
+  --sans: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121a26;
+    --surface: #1b2533;
+    --ink: #e8ecf1;
+    --ink-soft: #a3adbb;
+    --line: #2d3a4c;
+    --brass: #c9a765;
+    --good: #57b88b;
+    --warn: #d9a441;
+    --bad: #e2715c;
+    --pending: #7d8898;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.page {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 5rem;
+  display: grid;
+  gap: 2rem;
+}
+
+.masthead {
+  border-bottom: 2px solid var(--brass);
+  padding-bottom: 2rem;
+}
+
+.wordmark {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.75rem, 8vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  margin: 0 0 1.25rem;
+}
+
+.lede {
+  max-width: 38rem;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.125rem;
+}
+
+.lede strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.notice {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--warn);
+  background: var(--surface);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1.5rem;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.button {
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--brass);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.service-list,
+.listing-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.service {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.service p {
+  margin: 0;
+}
+
+.service-name {
+  font-weight: 600;
+}
+
+.service-url {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.service-summary {
+  margin-top: 0.25rem !important;
+}
+
+.dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  margin-top: 0.4rem;
+}
+
+.dot-good { background: var(--good); }
+.dot-warn { background: var(--warn); }
+.dot-bad { background: var(--bad); }
+.dot-pending { background: var(--pending); }
+
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.listing {
+  border-top: 2px solid var(--brass);
+  padding-top: 0.75rem;
+}
+
+.listing p {
+  margin: 0;
+}
+
+.listing-price {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+}
+
+.listing-title {
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.service-docs {
+  margin-top: 0.4rem !important;
+  font-size: 0.9375rem;
+}
+
+a {
+  color: var(--brass);
+  text-underline-offset: 3px;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.listing-status {
+  margin-top: 0.35rem !important;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.service-deps {
+  margin-top: 0.2rem !important;
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}

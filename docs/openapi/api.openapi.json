@@ -1,0 +1,1204 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PenthouseLife Main API",
+    "version": "1.0.0",
+    "description": "REST API documentation for the PenthouseLife Main API"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "dev (this server)"
+    }
+  ],
+  "paths": {
+    "/users": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Create a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List users",
+        "description": "Paginated, newest first. Filter by role or search by name/email.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "description": "Matches name or email (case-insensitive)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "priya"
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BUYER",
+                "AGENT",
+                "ADMIN"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedUsers"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get a user by id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "clx1a2b3c0000abcd1234efgh"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update a user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete a user",
+        "description": "Also removes the user's favorites. Their inquiries are kept without a user link.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inquiries": {
+      "post": {
+        "tags": [
+          "Inquiries"
+        ],
+        "summary": "Send an inquiry about a listing",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInquiry"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inquiry created with status NEW",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Inquiry"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Listing or user not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Inquiries"
+        ],
+        "summary": "List inquiries",
+        "description": "Paginated, newest first.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NEW",
+                "CONTACTED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "listingId",
+            "required": false,
+            "description": "Only inquiries for this listing",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "userId",
+            "required": false,
+            "description": "Only inquiries from this user",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of inquiries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedInquiries"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inquiries/{id}": {
+      "get": {
+        "tags": [
+          "Inquiries"
+        ],
+        "summary": "Get an inquiry with its listing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The inquiry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InquiryWithListing"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Inquiries"
+        ],
+        "summary": "Delete an inquiry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Inquiry deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inquiries/{id}/status": {
+      "patch": {
+        "tags": [
+          "Inquiries"
+        ],
+        "summary": "Change the status of an inquiry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInquiryStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated inquiry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Inquiry"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "General"
+        ],
+        "summary": "Check the service and database health",
+        "responses": {
+          "200": {
+            "description": "Health status. `status` is `degraded` when the database is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}/favorites": {
+      "get": {
+        "tags": [
+          "Favorites"
+        ],
+        "summary": "List a user's saved listings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved listings, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Favorite"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Favorites"
+        ],
+        "summary": "Save a listing to a user's favorites",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFavorite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Listing saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Favorite"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "User or listing not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The listing is already saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/users/{userId}/favorites/{listingId}": {
+      "delete": {
+        "tags": [
+          "Favorites"
+        ],
+        "summary": "Remove a listing from a user's favorites",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "listingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "General"
+        ],
+        "summary": "Check whether the API is running",
+        "responses": {
+          "200": {
+            "description": "API is running",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "penthouselife-api is running",
+                  "docs": "/api-docs"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx1a2b3c0000abcd1234efgh"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "priya.sharma@example.com"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Priya Sharma"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+91 98765 43210"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "BUYER",
+              "AGENT",
+              "ADMIN"
+            ],
+            "example": "BUYER"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedUsers": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "CreateUser": {
+        "type": "object",
+        "required": [
+          "email",
+          "fullName"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "priya.sharma@example.com"
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Priya Sharma"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+91 98765 43210"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "BUYER",
+              "AGENT",
+              "ADMIN"
+            ],
+            "default": "BUYER"
+          }
+        }
+      },
+      "UpdateUser": {
+        "type": "object",
+        "description": "Send only the fields you want to change",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "phone": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "BUYER",
+              "AGENT",
+              "ADMIN"
+            ]
+          }
+        },
+        "example": {
+          "fullName": "Priya S. Sharma",
+          "phone": "+91 90000 11111"
+        }
+      },
+      "Inquiry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx7q8r9s0000qrst3456uvwx"
+          },
+          "listingId": {
+            "type": "string",
+            "example": "clx4d5e6f0000ijkl5678mnop"
+          },
+          "userId": {
+            "type": "string",
+            "nullable": true,
+            "example": "clx1a2b3c0000abcd1234efgh"
+          },
+          "name": {
+            "type": "string",
+            "example": "Rahul Verma"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "rahul.verma@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+91 91234 56789"
+          },
+          "message": {
+            "type": "string",
+            "example": "Is the terrace private? I would like to schedule a viewing this weekend."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "CONTACTED",
+              "CLOSED"
+            ],
+            "example": "NEW"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InquiryWithListing": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Inquiry"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "listing": {
+                "$ref": "#/components/schemas/ListingSummary"
+              }
+            }
+          }
+        ]
+      },
+      "PaginatedInquiries": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inquiry"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "UpdateInquiryStatus": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "CONTACTED",
+              "CLOSED"
+            ],
+            "example": "CONTACTED"
+          }
+        }
+      },
+      "CreateInquiry": {
+        "type": "object",
+        "required": [
+          "listingId",
+          "name",
+          "email",
+          "message"
+        ],
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "description": "Listing the inquiry is about",
+            "example": "clx4d5e6f0000ijkl5678mnop"
+          },
+          "userId": {
+            "type": "string",
+            "description": "Registered user sending the inquiry, if any"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Rahul Verma"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "rahul.verma@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+91 91234 56789"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "example": "Is the terrace private? I would like to schedule a viewing this weekend."
+          }
+        }
+      },
+      "Favorite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx9z8y7x0000wxyz9876vuts"
+          },
+          "userId": {
+            "type": "string",
+            "example": "clx1a2b3c0000abcd1234efgh"
+          },
+          "listingId": {
+            "type": "string",
+            "example": "clx4d5e6f0000ijkl5678mnop"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "listing": {
+            "$ref": "#/components/schemas/ListingSummary"
+          }
+        }
+      },
+      "AddFavorite": {
+        "type": "object",
+        "required": [
+          "listingId"
+        ],
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "description": "Id of the listing to save",
+            "example": "clx4d5e6f0000ijkl5678mnop"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 404
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": "Resource not found"
+          },
+          "error": {
+            "type": "string",
+            "example": "Not Found"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "example": 57
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 3
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "example": "ok"
+          },
+          "service": {
+            "type": "string",
+            "description": "Value of SERVICE_NAME",
+            "example": "penthouselife-api"
+          },
+          "appEnv": {
+            "type": "string",
+            "description": "Value of APP_ENV",
+            "example": "dev"
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "example": "up"
+          },
+          "uptimeSeconds": {
+            "type": "integer",
+            "example": 123
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ListingSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx4d5e6f0000ijkl5678mnop"
+          },
+          "mlsNumber": {
+            "type": "string",
+            "example": "HYD-2026-0001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Skyline penthouse with private terrace"
+          },
+          "city": {
+            "type": "string",
+            "example": "Hyderabad"
+          },
+          "price": {
+            "type": "string",
+            "description": "Decimal serialized as a string",
+            "example": "45000000.00"
+          },
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "PENTHOUSE",
+              "APARTMENT",
+              "VILLA",
+              "TOWNHOUSE",
+              "PLOT"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PENDING",
+              "SOLD",
+              "WITHDRAWN"
+            ]
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Page": {
+        "in": "query",
+        "name": "page",
+        "required": false,
+        "description": "Page number, starting at 1",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "Limit": {
+        "in": "query",
+        "name": "limit",
+        "required": false,
+        "description": "Items per page. Defaults to PAGINATION_DEFAULT_LIMIT, capped at PAGINATION_MAX_LIMIT.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "example": 20
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid input. `message` lists every problem.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "statusCode": 400,
+              "message": [
+                "email must be an email"
+              ],
+              "error": "Bad Request"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The resource does not exist",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "A record with the same unique value already exists",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded (RATE_LIMIT_MAX requests per RATE_LIMIT_TTL_SECONDS)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "The database is not reachable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "statusCode": 503,
+              "message": "The database is not reachable",
+              "error": "Service Unavailable"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Users",
+      "description": "Buyers, agents and admins"
+    },
+    {
+      "name": "Inquiries",
+      "description": "Messages from buyers about a listing"
+    },
+    {
+      "name": "Favorites",
+      "description": "Listings a user has saved"
+    },
+    {
+      "name": "General",
+      "description": "Service status"
+    }
+  ]
+}

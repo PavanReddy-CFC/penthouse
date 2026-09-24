@@ -1,0 +1,44 @@
+{
+  "name": "penthouselife",
+  "private": true,
+  "version": "0.6.0",
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "apps/mls"
+  ],
+  "scripts": {
+    "postinstall": "prisma generate",
+    "dev": "concurrently -n web,api,mls -c cyan,magenta,yellow \"npm run dev -w apps/web\" \"npm run dev -w apps/api\" \"npm run dev -w apps/mls\"",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:mls": "npm run dev -w apps/mls",
+    "services:up": "docker compose up -d",
+    "services:down": "docker compose down",
+    "services:status": "docker compose ps",
+    "build": "npm run build -w apps/api && npm run build -w apps/mls && npm run build -w apps/web",
+    "db:generate": "prisma generate",
+    "db:migrate": "dotenv -e .env -- prisma migrate dev",
+    "db:seed": "dotenv -e .env -- node prisma/seed.mjs",
+    "db:reset": "dotenv -e .env -- prisma migrate reset",
+    "db:deploy": "prisma migrate deploy",
+    "db:deploy:env": "dotenv -e .env -- prisma migrate deploy",
+    "db:studio": "dotenv -e .env -- prisma studio",
+    "openapi:export": "npm run openapi:export -w apps/api && npm run openapi:export -w apps/mls",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "dotenv-cli": "^8.0.0",
+    "prisma": "^6.16.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "prisma": true,
+    "@prisma/engines": true,
+    "@prisma/client": true,
+    "@scarf/scarf": false
+  }
+}
