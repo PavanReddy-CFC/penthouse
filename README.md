@@ -292,4 +292,4 @@ with every variable ready to paste: **[docs/RAILWAY.md](docs/RAILWAY.md)**.
 ## Secrets
 
 `.env` is git-ignored; only `.env.example` is committed. Never put real
-credentials in the template.
+credentials in the template. v
